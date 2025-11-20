@@ -1,14 +1,21 @@
 import asyncio
+import logging
+import os
+from pathlib import Path
+
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.types import Message
 from aiogram.enums import ParseMode
-import logging
-import os
 from dotenv import load_dotenv
-load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+if not BOT_TOKEN:
+	raise RuntimeError("Check .env")
 
 logging.basicConfig(level=logging.INFO)
 
