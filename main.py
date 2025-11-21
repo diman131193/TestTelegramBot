@@ -12,6 +12,8 @@ from aiogram.types import FSInputFile
 
 BASE_DIR = Path(__file__).resolve().parent
 
+ABOUT_PDF_FILE_ID = "BQACAgIAAxkDAANGaSBTOcj-qIIW4H7OjXAr1xpTvAcAAqaMAAK5gghJ4FX5P5-pbJk2BA"
+
 load_dotenv(BASE_DIR / ".env")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -47,14 +49,15 @@ async def cmd_start(message: Message):
 
 @router.message(Command("guid"))
 async def cmd_guid(message: Message):
-    await message.answer(
-        TEXTS["guid"]
+    caption = TEXTS["guid"]
+    sent = await message.answer_document(
+        ABOUT_PDF_FILE_ID,
+        caption=caption
     )
-    pdf_path = BASE_DIR / "pro_rost.pdf"
-    if pdf_path.exists():
-        await message.answer_document(FSInputFile(pdf_path))
-    else:
-        await message.answer("File not found.")
+    if not sent.document:
+        pdf_path = BASE_DIR / "pro_rost.pdf"
+        if pdf_path.exists():
+            await message.answer_document(FSInputFile(pdf_path), caption=caption)
 
 @router.message(F.text)
 async def echo_handler(message: Message):
