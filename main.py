@@ -16,58 +16,43 @@ from aiogram.types import (
 
 BASE_DIR = Path(__file__).resolve().parent
 
-ABOUT_PDF_FILE_ID = "BQACAgIAAxkDAANGaSBTOcj-qIIW4H7OjXAr1xpTvAcAAqaMAAK5gghJ4FX5P5-pbJk2BA"
+TEXTS_PATH = BASE_DIR / "texts.json"
+FILES_PATH = BASE_DIR / "files.json"
+ENV_PATH = BASE_DIR / ".env"
+DB_PATH = BASE_DIR / "contacts.db"
 
-load_dotenv(BASE_DIR / ".env")
+# разделы
+START = "start"
+CLIENT = "client"
+MASTER = "master"
+SERVICES = "services"
+KERATIN = "keratin"
+BOTOX = "botox"
+NANOPLASTICS = "nanoplastics"
+PRICE = "price"
+COMMENTS = "comments"
+SIGNING = "signing"
+CONSULTING = "consulting"
+
+load_dotenv(ENV_PATH)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO)
 
-def get_menu_inline_keyboard() -> InlineKeyboardMarkup:
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                text="Записаться",
-                url="https://dikidi.ru/1723277"
-            ),
-            InlineKeyboardButton(
-                text="Портфолио",
-                url="https://instagram.com/ТВОЙ_INSTAGRAM"
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text="Прайс",
-                callback_data="price"
-            ),
-            InlineKeyboardButton(
-                text="Уход",
-                callback_data="care"
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text="Контакты",
-                callback_data="contacts"
-            )
-        ],
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def load_texts_json(path: Path) -> dict:
+def load_json(path: Path) -> dict:
     if not path.exists():
         return {}
     with path.open(encoding="utf-8") as f:
         data = json.load(f)
     return {str(k): str(v) for k, v in data.items()}
 
-TEXTS = load_texts_json(BASE_DIR / "texts.json")
 
-async def menu_price(message: Message):
-    await message.answer(TEXTS["about"])
+TEXTS = load_json(TEXTS_PATH)
+FILES = load_json(FILES_PATH)
 
-DB_PATH = BASE_DIR / "contacts.db"
+
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
@@ -76,6 +61,7 @@ async def init_db():
             first_name TEXT,
             last_name TEXT,
             username TEXT,
+            phone_number TEXT,
             is_bot INTEGER,
             language_code TEXT,
             last_activity_at TEXT
@@ -104,16 +90,17 @@ async def log_user(message: Message):
                 """
                 INSERT INTO users (
                     chat_id, first_name, last_name, username, 
-                    is_bot, language_code,
+                    phone_number, is_bot, language_code,
                     last_activity_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     message.chat.id,
                     user.first_name,
                     user.last_name,
                     user.username,
+                    "",
                     int(user.is_bot),
                     user.language_code,
                     now,
@@ -128,6 +115,7 @@ async def log_user(message: Message):
                     first_name = ?,
                     last_name = ?,
                     username = ?,
+                    phone_number = ?,
                     is_bot = ?,
                     language_code = ?,
                     last_activity_at = ?
@@ -137,6 +125,7 @@ async def log_user(message: Message):
                     user.first_name,
                     user.last_name,
                     user.username,
+                    "",
                     int(user.is_bot),
                     user.language_code,
                     now,
@@ -147,48 +136,190 @@ async def log_user(message: Message):
         await db.commit()
 
 
+def get_client_services_keyboard() -> InlineKeyboardMarkup:
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                text=TEXTS[f"button_{PRICE}"],
+                callback_data=PRICE
+            ),
+            InlineKeyboardButton(
+                text=TEXTS[f"button_{COMMENTS}"],
+                callback_data=COMMENTS
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=TEXTS[f"button_{SIGNING}"],
+                url="https://dikidi.ru/1723277"
+            ),
+            InlineKeyboardButton(
+                text=TEXTS[f"button_{CONSULTING}"],
+                callback_data=CONSULTING
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=TEXTS[f"button_return_{CLIENT}"],
+                callback_data=CLIENT
+            )
+        ],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
 
 router = Router()
 
-@router.message(Command("menu"))
-async def cmd_menu(message: Message):
+
+@router.message(Command(START))
+async def command_start(message: Message):
     await log_user(message)
-    await message.answer(
-        TEXTS["menu"],
-        reply_markup=get_menu_inline_keyboard()
+    await message.answer_photo(
+        FILES[START],
+        caption=TEXTS[START],
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=
+            [
+                [
+                    InlineKeyboardButton(
+                        text=TEXTS[f"button_{MASTER}"],
+                        parse_mode=ParseMode.HTML,
+                        callback_data=MASTER
+                    ),
+                    InlineKeyboardButton(
+                        text=TEXTS[f"button_{CLIENT}"],
+                        parse_mode=ParseMode.HTML,
+                        callback_data=CLIENT
+                    ),
+                ],
+            ]
+        )
     )
 
-@router.callback_query(F.data == "price")
+
+@router.callback_query(F.data == CLIENT)
+async def callback_menu_client(callback: CallbackQuery):
+    await log_user(callback.message)
+    await callback.message.answer_photo(
+        FILES[CLIENT],
+        caption=TEXTS[CLIENT].format(name=callback.message.from_user.first_name),
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=
+            [
+                [
+                    InlineKeyboardButton(
+                        text=TEXTS[f"button_{SERVICES}"],
+                        parse_mode=ParseMode.HTML,
+                        callback_data=SERVICES
+                    ),
+                ],
+            ]
+        )
+    )
+
+
+@router.callback_query(F.data == SERVICES)
 async def cb_menu_price(callback: CallbackQuery):
     await log_user(callback.message)
-    await menu_price(callback.message)
-    await callback.answer()
-
-@router.message(Command("price"))
-async def cmd_menu_price(message: Message):
-    await log_user(message)
-    await menu_price(message)
-
-@router.message(Command("guid"))
-async def cmd_guid(message: Message):
-    await log_user(message)
-    caption = TEXTS["guid"]
-    sent = await message.answer_document(
-        ABOUT_PDF_FILE_ID,
-        caption=caption
+    await callback.message.answer_photo(
+        FILES[SERVICES],
+        caption=TEXTS[SERVICES],
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=
+            [
+                [
+                    InlineKeyboardButton(
+                        text=TEXTS[f"button_{KERATIN}"],
+                        parse_mode=ParseMode.HTML,
+                        callback_data=KERATIN
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=TEXTS[f"button_{BOTOX}"],
+                        parse_mode=ParseMode.HTML,
+                        callback_data=BOTOX
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        text=TEXTS[f"button_{NANOPLASTICS}"],
+                        parse_mode=ParseMode.HTML,
+                        callback_data=NANOPLASTICS
+                    ),
+                ]
+            ]
+        )
     )
-    if not sent.document:
-        pdf_path = BASE_DIR / "pro_rost.pdf"
-        if pdf_path.exists():
-            await message.answer_document(FSInputFile(pdf_path), caption=caption)
+
+
+@router.callback_query(F.data == KERATIN)
+async def callback_menu_client(callback: CallbackQuery):
+    await log_user(callback.message)
+    await callback.message.answer_photo(
+        FILES[KERATIN],
+        caption=TEXTS[KERATIN],
+        parse_mode=ParseMode.HTML,
+        reply_markup=get_client_services_keyboard()
+    )
+
+
+@router.callback_query(F.data == MASTER)
+async def callback_menu_master(callback: CallbackQuery):
+    await log_user(callback.message)
+    await callback.message.answer(
+        TEXTS[MASTER],
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=
+            [
+                [
+                    InlineKeyboardButton(
+                        text=TEXTS[f"button_{SERVICES}"],
+                        parse_mode=ParseMode.HTML,
+                        callback_data=SERVICES
+                    ),
+                ],
+            ]
+        )
+    )
+
+
+# @router.message(Command("guid"))
+# async def cmd_guid(message: Message):
+#     await log_user(message)
+#     caption = TEXTS["guid"]
+#     sent = await message.answer_document(
+#         FILES["about_pdf"],
+#         parse_mode=ParseMode.HTML,
+#         caption=caption
+#     )
+#     if not sent.document:
+#         pdf_path = BASE_DIR / "pro_rost.pdf"
+#         if pdf_path.exists():
+#             await message.answer_document(FSInputFile(pdf_path), caption=caption)
+
+
+@router.message(Command("load"))
+async def cmd_guid(message: Message):
+    sent = await message.answer_photo(
+        FSInputFile(BASE_DIR / "IMG_2287.jpg")
+    )
+    if sent.photo:
+        print(sent.photo.pop().file_id)
+
 
 @router.message(F.text)
 async def echo_handler(message: Message):
     await log_user(message)
     await message.answer(
-        f"Ты написал: <b>{message.text}</b>",
+        f"Некорректная команда: <b>{message.text}</b>",
         parse_mode=ParseMode.HTML
     )
+
 
 async def main():
     bot = Bot(token=BOT_TOKEN)
@@ -196,6 +327,7 @@ async def main():
     dp.include_router(router)
     await init_db()
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
