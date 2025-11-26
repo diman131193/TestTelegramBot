@@ -55,6 +55,8 @@ FILES = load_json(FILES_PATH)
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
+        # await db.execute("""DROP TABLE IF EXISTS users;""")
+        # await db.commit()
         await db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             chat_id INTEGER PRIMARY KEY,
@@ -64,14 +66,17 @@ async def init_db():
             phone_number TEXT,
             is_bot INTEGER,
             language_code TEXT,
-            last_activity_at TEXT
+            last_activity_at TEXT,
+            command TEXT
         );
         """)
         await db.commit()
 
 
-async def log_user(message: Message):
-    user = message.from_user
+async def log_user(chat_id: int,
+                   user,
+                   command: str = None,
+                   phone_number: str = None):
     if user is None:
         return
 
@@ -79,10 +84,14 @@ async def log_user(message: Message):
 
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
-            "SELECT chat_id FROM users WHERE chat_id = ?",
-            (message.chat.id,)
+            "SELECT chat_id, phone_number FROM users WHERE chat_id = ?",
+            (chat_id,)
         )
         row = await cursor.fetchone()
+
+        if row is not None and phone_number is None:
+            _, existing_phone = row
+            phone_number = existing_phone
 
         if row is None:
             # Вставка нового пользователя
@@ -91,19 +100,20 @@ async def log_user(message: Message):
                 INSERT INTO users (
                     chat_id, first_name, last_name, username, 
                     phone_number, is_bot, language_code,
-                    last_activity_at
+                    last_activity_at, command
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    message.chat.id,
+                    chat_id,
                     user.first_name,
                     user.last_name,
                     user.username,
-                    "",
+                    phone_number,
                     int(user.is_bot),
                     user.language_code,
                     now,
+                    command,
                 )
             )
         else:
@@ -118,18 +128,20 @@ async def log_user(message: Message):
                     phone_number = ?,
                     is_bot = ?,
                     language_code = ?,
-                    last_activity_at = ?
+                    last_activity_at = ?,
+                    command = ?
                 WHERE chat_id = ?
                 """,
                 (
                     user.first_name,
                     user.last_name,
                     user.username,
-                    "",
+                    phone_number,
                     int(user.is_bot),
                     user.language_code,
                     now,
-                    message.chat.id,
+                    command,
+                    chat_id,
                 )
             )
 
@@ -173,7 +185,7 @@ router = Router()
 
 @router.message(Command(START))
 async def command_start(message: Message):
-    await log_user(message)
+    await log_user(message.chat.id, message.from_user, START)
     await message.answer_photo(
         FILES[START],
         caption=TEXTS[START],
@@ -200,10 +212,10 @@ async def command_start(message: Message):
 
 @router.callback_query(F.data == CLIENT)
 async def callback_menu_client(callback: CallbackQuery):
-    await log_user(callback.message)
+    await log_user(callback.message.chat.id, callback.from_user, CLIENT)
     await callback.message.answer_photo(
         FILES[CLIENT],
-        caption=TEXTS[CLIENT].format(name=callback.message.from_user.first_name),
+        caption=TEXTS[CLIENT].format(name=callback.from_user.first_name),
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
@@ -222,7 +234,7 @@ async def callback_menu_client(callback: CallbackQuery):
 
 @router.callback_query(F.data == SERVICES)
 async def cb_menu_price(callback: CallbackQuery):
-    await log_user(callback.message)
+    await log_user(callback.message.chat.id, callback.from_user, SERVICES)
     await callback.message.answer_photo(
         FILES[SERVICES],
         caption=TEXTS[SERVICES],
@@ -258,7 +270,7 @@ async def cb_menu_price(callback: CallbackQuery):
 
 @router.callback_query(F.data == KERATIN)
 async def callback_menu_client(callback: CallbackQuery):
-    await log_user(callback.message)
+    await log_user(callback.message.chat.id, callback.from_user, KERATIN)
     await callback.message.answer_photo(
         FILES[KERATIN],
         caption=TEXTS[KERATIN],
@@ -269,7 +281,7 @@ async def callback_menu_client(callback: CallbackQuery):
 
 @router.callback_query(F.data == MASTER)
 async def callback_menu_master(callback: CallbackQuery):
-    await log_user(callback.message)
+    await log_user(callback.message.chat.id, callback.from_user, MASTER)
     await callback.message.answer(
         TEXTS[MASTER],
         parse_mode=ParseMode.HTML,
@@ -314,7 +326,7 @@ async def cmd_guid(message: Message):
 
 @router.message(F.text)
 async def echo_handler(message: Message):
-    await log_user(message)
+    await log_user(message.chat.id, message.from_user)
     await message.answer(
         f"Некорректная команда: <b>{message.text}</b>",
         parse_mode=ParseMode.HTML
