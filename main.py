@@ -1,24 +1,20 @@
 import asyncio
 import logging
 import os
-import json
 import re
 from pathlib import Path
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.enums import ParseMode
 from dotenv import load_dotenv
 from aiogram.filters import Command
-from aiogram.types import (
-    Message, FSInputFile, CallbackQuery,
-    InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
-)
+from aiogram.types import (Message, FSInputFile, CallbackQuery, InputMediaPhoto)
 import app.constants as const
 import app.db as db
+from app.texts import TEXTS, FILES
+import app.keyboards as keyboards
 
 BASE_DIR = Path(__file__).resolve().parent
 
-TEXTS_PATH = BASE_DIR / "texts.json"
-FILES_PATH = BASE_DIR / "files.json"
 ENV_PATH = BASE_DIR / ".env"
 
 ADMIN_CHATS: set[int] = set()
@@ -28,73 +24,6 @@ load_dotenv(ENV_PATH)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO)
-
-
-def load_json(path: Path) -> dict:
-    if not path.exists():
-        return {}
-    with path.open(encoding="utf-8") as f:
-        data = json.load(f)
-    return {str(k): v for k, v in data.items()}
-
-
-TEXTS = load_json(TEXTS_PATH)
-FILES = load_json(FILES_PATH)
-
-MASTER_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.MASTER}"],
-    callback_data=const.MASTER
-)
-
-CLIENTS_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.CLIENT}"],
-    callback_data=const.CLIENT
-)
-
-SERVICES_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.SERVICES}"],
-    callback_data=const.SERVICES
-)
-
-PRICE_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.PRICE}"],
-    callback_data=const.PRICE
-)
-
-REVIEWS_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.REVIEWS}"],
-    callback_data=const.REVIEWS
-)
-
-SIGNING_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.SIGNING}"],
-    url="https://dikidi.ru/1723277"
-)
-
-CONSULTING_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.CONSULTING}"],
-    callback_data=const.CONSULTING
-)
-
-RETURN_CLIENT_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_return_{const.CLIENT}"],
-    callback_data=const.CLIENT
-)
-
-KERATIN_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.KERATIN}"],
-    callback_data=const.KERATIN
-)
-
-BOTOX_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.BOTOX}"],
-    callback_data=const.BOTOX
-)
-
-NANOPLASTICS_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{const.NANOPLASTIC}"],
-    callback_data=const.NANOPLASTIC
-)
 
 router = Router()
 
@@ -107,12 +36,7 @@ async def command_start(message: Message):
         FILES[const.START],
         caption=TEXTS[const.START],
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=
-            [
-                [MASTER_BUTTON, CLIENTS_BUTTON, ],
-            ]
-        )
+        reply_markup=keyboards.start_keyboard()
     )
 
 
@@ -124,14 +48,7 @@ async def callback_menu_client(callback: CallbackQuery):
         FILES[const.CLIENT],
         caption=TEXTS[const.CLIENT].format(name=callback.from_user.first_name),
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=
-            [
-                [SERVICES_BUTTON, ],
-                [PRICE_BUTTON, REVIEWS_BUTTON, ],
-                [SIGNING_BUTTON, CONSULTING_BUTTON, ],
-            ]
-        )
+        reply_markup=keyboards.client_menu_keyboard()
     )
 
 
@@ -143,14 +60,7 @@ async def callback_menu_price(callback: CallbackQuery):
         FILES[const.SERVICES],
         caption=TEXTS[const.SERVICES],
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=
-            [
-                [KERATIN_BUTTON, ],
-                [BOTOX_BUTTON, ],
-                [NANOPLASTICS_BUTTON, ],
-            ]
-        )
+        reply_markup=keyboards.services_keyboard()
     )
 
 
@@ -162,14 +72,7 @@ async def callback_keratin(callback: CallbackQuery):
         FILES[const.KERATIN],
         caption=TEXTS[const.KERATIN],
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=
-            [
-                [PRICE_BUTTON, REVIEWS_BUTTON, ],
-                [SIGNING_BUTTON, CONSULTING_BUTTON, ],
-                [RETURN_CLIENT_BUTTON, ],
-            ]
-        )
+        reply_markup=keyboards.keratin_menu_keyboard()
     )
 
 
@@ -181,14 +84,7 @@ async def callback_botox(callback: CallbackQuery):
         FILES[const.BOTOX],
         caption=TEXTS[const.BOTOX],
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=
-            [
-                [PRICE_BUTTON, REVIEWS_BUTTON, ],
-                [SIGNING_BUTTON, CONSULTING_BUTTON, ],
-                [RETURN_CLIENT_BUTTON, ],
-            ]
-        )
+        reply_markup=keyboards.keratin_menu_keyboard()
     )
 
 
@@ -200,14 +96,7 @@ async def callback_botox(callback: CallbackQuery):
         FILES[const.NANOPLASTIC],
         caption=TEXTS[const.NANOPLASTIC],
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=
-            [
-                [PRICE_BUTTON, REVIEWS_BUTTON, ],
-                [SIGNING_BUTTON, CONSULTING_BUTTON, ],
-                [RETURN_CLIENT_BUTTON, ],
-            ]
-        )
+        reply_markup=keyboards.keratin_menu_keyboard()
     )
 
 
@@ -240,12 +129,7 @@ async def get_reviews(message: Message):
     await message.answer(
         intro,
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=
-            [
-                [SIGNING_BUTTON, ]
-            ]
-        )
+        reply_markup=keyboards.reviews_keyboard()
     )
 
 
