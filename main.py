@@ -2,26 +2,24 @@ import asyncio
 import logging
 import os
 import json
-import aiosqlite
 import re
 from pathlib import Path
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.enums import ParseMode
 from dotenv import load_dotenv
-from datetime import datetime, timezone
 from aiogram.filters import Command
 from aiogram.types import (
     Message, FSInputFile, CallbackQuery,
     InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 )
 import app.constants as const
+import app.db as db
 
 BASE_DIR = Path(__file__).resolve().parent
 
 TEXTS_PATH = BASE_DIR / "texts.json"
 FILES_PATH = BASE_DIR / "files.json"
 ENV_PATH = BASE_DIR / ".env"
-DB_PATH = BASE_DIR / "contacts.db"
 
 ADMIN_CHATS: set[int] = set()
 
@@ -42,102 +40,6 @@ def load_json(path: Path) -> dict:
 
 TEXTS = load_json(TEXTS_PATH)
 FILES = load_json(FILES_PATH)
-
-
-async def init_db():
-    async with aiosqlite.connect(DB_PATH) as db:
-        # await db.execute("""DROP TABLE IF EXISTS users;""")
-        # await db.commit()
-        await db.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            chat_id INTEGER PRIMARY KEY,
-            first_name TEXT,
-            last_name TEXT,
-            username TEXT,
-            phone_number TEXT,
-            is_bot INTEGER,
-            language_code TEXT,
-            last_activity_at TEXT,
-            command TEXT
-        );
-        """)
-        await db.commit()
-
-
-async def log_user(chat_id: int,
-                   user,
-                   command: str = None,
-                   phone_number: str = None):
-    if user is None:
-        return
-
-    now = datetime.now(timezone.utc).isoformat()
-
-    async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute(
-            "SELECT chat_id, phone_number FROM users WHERE chat_id = ?",
-            (chat_id,)
-        )
-        row = await cursor.fetchone()
-
-        if row is not None and phone_number is None:
-            _, existing_phone = row
-            phone_number = existing_phone
-
-        if row is None:
-            # Вставка нового пользователя
-            await db.execute(
-                """
-                INSERT INTO users (
-                    chat_id, first_name, last_name, username, 
-                    phone_number, is_bot, language_code,
-                    last_activity_at, command
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    chat_id,
-                    user.first_name,
-                    user.last_name,
-                    user.username,
-                    phone_number,
-                    int(user.is_bot),
-                    user.language_code,
-                    now,
-                    command,
-                )
-            )
-        else:
-            # Обновление существующего
-            await db.execute(
-                """
-                UPDATE users
-                SET
-                    first_name = ?,
-                    last_name = ?,
-                    username = ?,
-                    phone_number = ?,
-                    is_bot = ?,
-                    language_code = ?,
-                    last_activity_at = ?,
-                    command = ?
-                WHERE chat_id = ?
-                """,
-                (
-                    user.first_name,
-                    user.last_name,
-                    user.username,
-                    phone_number,
-                    int(user.is_bot),
-                    user.language_code,
-                    now,
-                    command,
-                    chat_id,
-                )
-            )
-
-        await db.commit()
-
 
 MASTER_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{const.MASTER}"],
@@ -200,7 +102,7 @@ router = Router()
 @router.message(Command(const.START))
 async def command_start(message: Message):
     ADMIN_CHATS.discard(message.chat.id)
-    await log_user(message.chat.id, message.from_user, const.START)
+    await db.log_user(message.chat.id, message.from_user, const.START)
     await message.answer_photo(
         FILES[const.START],
         caption=TEXTS[const.START],
@@ -217,7 +119,7 @@ async def command_start(message: Message):
 @router.callback_query(F.data == const.CLIENT)
 async def callback_menu_client(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, const.CLIENT)
+    await db.log_user(callback.message.chat.id, callback.from_user, const.CLIENT)
     await callback.message.answer_photo(
         FILES[const.CLIENT],
         caption=TEXTS[const.CLIENT].format(name=callback.from_user.first_name),
@@ -236,7 +138,7 @@ async def callback_menu_client(callback: CallbackQuery):
 @router.callback_query(F.data == const.SERVICES)
 async def callback_menu_price(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, const.SERVICES)
+    await db.log_user(callback.message.chat.id, callback.from_user, const.SERVICES)
     await callback.message.answer_photo(
         FILES[const.SERVICES],
         caption=TEXTS[const.SERVICES],
@@ -255,7 +157,7 @@ async def callback_menu_price(callback: CallbackQuery):
 @router.callback_query(F.data == const.KERATIN)
 async def callback_keratin(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, const.KERATIN)
+    await db.log_user(callback.message.chat.id, callback.from_user, const.KERATIN)
     await callback.message.answer_photo(
         FILES[const.KERATIN],
         caption=TEXTS[const.KERATIN],
@@ -274,7 +176,7 @@ async def callback_keratin(callback: CallbackQuery):
 @router.callback_query(F.data == const.BOTOX)
 async def callback_botox(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, const.BOTOX)
+    await db.log_user(callback.message.chat.id, callback.from_user, const.BOTOX)
     await callback.message.answer_photo(
         FILES[const.BOTOX],
         caption=TEXTS[const.BOTOX],
@@ -293,7 +195,7 @@ async def callback_botox(callback: CallbackQuery):
 @router.callback_query(F.data == const.NANOPLASTIC)
 async def callback_botox(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, const.NANOPLASTIC)
+    await db.log_user(callback.message.chat.id, callback.from_user, const.NANOPLASTIC)
     await callback.message.answer_photo(
         FILES[const.NANOPLASTIC],
         caption=TEXTS[const.NANOPLASTIC],
@@ -312,7 +214,7 @@ async def callback_botox(callback: CallbackQuery):
 @router.callback_query(F.data == const.CONSULTING)
 async def callback_consulting(callback: CallbackQuery):
     ADMIN_CHATS.add(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, const.CONSULTING)
+    await db.log_user(callback.message.chat.id, callback.from_user, const.CONSULTING)
     await callback.message.answer(
         TEXTS[const.CONSULTING],
         parse_mode=ParseMode.HTML
@@ -349,20 +251,20 @@ async def get_reviews(message: Message):
 
 @router.callback_query(F.data == const.REVIEWS)
 async def callback_reviews(callback: CallbackQuery):
-    await log_user(callback.message.chat.id, callback.from_user, const.REVIEWS)
+    await db.log_user(callback.message.chat.id, callback.from_user, const.REVIEWS)
     await get_reviews(callback.message)
 
 
 @router.message(Command(const.REVIEWS))
 async def command_review(message: Message):
-    await log_user(message.chat.id, message.from_user, const.REVIEWS)
+    await db.log_user(message.chat.id, message.from_user, const.REVIEWS)
     await get_reviews(message)
 
 
 @router.callback_query(F.data == const.MASTER)
 async def callback_menu_master(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, const.MASTER)
+    await db.log_user(callback.message.chat.id, callback.from_user, const.MASTER)
     await callback.message.answer(
         TEXTS[const.MASTER],
         parse_mode=ParseMode.HTML,
@@ -440,7 +342,7 @@ async def handle_message(message: Message, bot: Bot):
 
 @router.message(F.text)
 async def echo_handler(message: Message):
-    await log_user(message.chat.id, message.from_user)
+    await db.log_user(message.chat.id, message.from_user)
     await message.answer(
         f"Некорректная команда: <b>{message.text}</b>",
         parse_mode=ParseMode.HTML
@@ -451,7 +353,7 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
     dp.include_router(router)
-    await init_db()
+    await db.init_db()
     await dp.start_polling(bot)
 
 
