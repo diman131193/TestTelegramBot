@@ -14,6 +14,7 @@ from aiogram.types import (
     Message, FSInputFile, CallbackQuery,
     InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 )
+import app.constants as const
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -22,21 +23,7 @@ FILES_PATH = BASE_DIR / "files.json"
 ENV_PATH = BASE_DIR / ".env"
 DB_PATH = BASE_DIR / "contacts.db"
 
-ADMIN_CHAT_ID = 982065213
 ADMIN_CHATS: set[int] = set()
-
-# разделы
-START = "start"
-CLIENT = "client"
-MASTER = "master"
-SERVICES = "services"
-KERATIN = "keratin"
-BOTOX = "botox"
-NANOPLASTICS = "nanoplastics"
-PRICE = "price"
-REVIEWS = "reviews"
-SIGNING = "signing"
-CONSULTING = "consulting"
 
 load_dotenv(ENV_PATH)
 
@@ -153,70 +140,70 @@ async def log_user(chat_id: int,
 
 
 MASTER_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{MASTER}"],
-    callback_data=MASTER
+    text=TEXTS[f"button_{const.MASTER}"],
+    callback_data=const.MASTER
 )
 
 CLIENTS_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{CLIENT}"],
-    callback_data=CLIENT
+    text=TEXTS[f"button_{const.CLIENT}"],
+    callback_data=const.CLIENT
 )
 
 SERVICES_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{SERVICES}"],
-    callback_data=SERVICES
+    text=TEXTS[f"button_{const.SERVICES}"],
+    callback_data=const.SERVICES
 )
 
 PRICE_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{PRICE}"],
-    callback_data=PRICE
+    text=TEXTS[f"button_{const.PRICE}"],
+    callback_data=const.PRICE
 )
 
 REVIEWS_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{REVIEWS}"],
-    callback_data=REVIEWS
+    text=TEXTS[f"button_{const.REVIEWS}"],
+    callback_data=const.REVIEWS
 )
 
 SIGNING_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{SIGNING}"],
+    text=TEXTS[f"button_{const.SIGNING}"],
     url="https://dikidi.ru/1723277"
 )
 
 CONSULTING_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{CONSULTING}"],
-    callback_data=CONSULTING
+    text=TEXTS[f"button_{const.CONSULTING}"],
+    callback_data=const.CONSULTING
 )
 
 RETURN_CLIENT_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_return_{CLIENT}"],
-    callback_data=CLIENT
+    text=TEXTS[f"button_return_{const.CLIENT}"],
+    callback_data=const.CLIENT
 )
 
 KERATIN_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{KERATIN}"],
-    callback_data=KERATIN
+    text=TEXTS[f"button_{const.KERATIN}"],
+    callback_data=const.KERATIN
 )
 
 BOTOX_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{BOTOX}"],
-    callback_data=BOTOX
+    text=TEXTS[f"button_{const.BOTOX}"],
+    callback_data=const.BOTOX
 )
 
 NANOPLASTICS_BUTTON = InlineKeyboardButton(
-    text=TEXTS[f"button_{NANOPLASTICS}"],
-    callback_data=NANOPLASTICS
+    text=TEXTS[f"button_{const.NANOPLASTIC}"],
+    callback_data=const.NANOPLASTIC
 )
 
 router = Router()
 
 
-@router.message(Command(START))
+@router.message(Command(const.START))
 async def command_start(message: Message):
     ADMIN_CHATS.discard(message.chat.id)
-    await log_user(message.chat.id, message.from_user, START)
+    await log_user(message.chat.id, message.from_user, const.START)
     await message.answer_photo(
-        FILES[START],
-        caption=TEXTS[START],
+        FILES[const.START],
+        caption=TEXTS[const.START],
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
@@ -227,13 +214,13 @@ async def command_start(message: Message):
     )
 
 
-@router.callback_query(F.data == CLIENT)
+@router.callback_query(F.data == const.CLIENT)
 async def callback_menu_client(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, CLIENT)
+    await log_user(callback.message.chat.id, callback.from_user, const.CLIENT)
     await callback.message.answer_photo(
-        FILES[CLIENT],
-        caption=TEXTS[CLIENT].format(name=callback.from_user.first_name),
+        FILES[const.CLIENT],
+        caption=TEXTS[const.CLIENT].format(name=callback.from_user.first_name),
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
@@ -246,13 +233,13 @@ async def callback_menu_client(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == SERVICES)
+@router.callback_query(F.data == const.SERVICES)
 async def callback_menu_price(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, SERVICES)
+    await log_user(callback.message.chat.id, callback.from_user, const.SERVICES)
     await callback.message.answer_photo(
-        FILES[SERVICES],
-        caption=TEXTS[SERVICES],
+        FILES[const.SERVICES],
+        caption=TEXTS[const.SERVICES],
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
@@ -265,13 +252,13 @@ async def callback_menu_price(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == KERATIN)
+@router.callback_query(F.data == const.KERATIN)
 async def callback_keratin(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, KERATIN)
+    await log_user(callback.message.chat.id, callback.from_user, const.KERATIN)
     await callback.message.answer_photo(
-        FILES[KERATIN],
-        caption=TEXTS[KERATIN],
+        FILES[const.KERATIN],
+        caption=TEXTS[const.KERATIN],
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
@@ -284,13 +271,13 @@ async def callback_keratin(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == BOTOX)
+@router.callback_query(F.data == const.BOTOX)
 async def callback_botox(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, BOTOX)
+    await log_user(callback.message.chat.id, callback.from_user, const.BOTOX)
     await callback.message.answer_photo(
-        FILES[BOTOX],
-        caption=TEXTS[BOTOX],
+        FILES[const.BOTOX],
+        caption=TEXTS[const.BOTOX],
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
@@ -303,20 +290,39 @@ async def callback_botox(callback: CallbackQuery):
     )
 
 
-@router.callback_query(F.data == CONSULTING)
+@router.callback_query(F.data == const.NANOPLASTIC)
+async def callback_botox(callback: CallbackQuery):
+    ADMIN_CHATS.discard(callback.message.chat.id)
+    await log_user(callback.message.chat.id, callback.from_user, const.NANOPLASTIC)
+    await callback.message.answer_photo(
+        FILES[const.NANOPLASTIC],
+        caption=TEXTS[const.NANOPLASTIC],
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=
+            [
+                [PRICE_BUTTON, REVIEWS_BUTTON, ],
+                [SIGNING_BUTTON, CONSULTING_BUTTON, ],
+                [RETURN_CLIENT_BUTTON, ],
+            ]
+        )
+    )
+
+
+@router.callback_query(F.data == const.CONSULTING)
 async def callback_consulting(callback: CallbackQuery):
     ADMIN_CHATS.add(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, CONSULTING)
+    await log_user(callback.message.chat.id, callback.from_user, const.CONSULTING)
     await callback.message.answer(
-        TEXTS[CONSULTING],
+        TEXTS[const.CONSULTING],
         parse_mode=ParseMode.HTML
     )
 
 
 async def get_reviews(message: Message):
     ADMIN_CHATS.discard(message.chat.id)
-    intro = TEXTS[REVIEWS]
-    photo_ids = FILES[REVIEWS]
+    intro = TEXTS[const.REVIEWS]
+    photo_ids = FILES[const.REVIEWS]
 
     if not photo_ids:
         await message.answer(intro, parse_mode=ParseMode.HTML)
@@ -341,24 +347,24 @@ async def get_reviews(message: Message):
     )
 
 
-@router.callback_query(F.data == REVIEWS)
+@router.callback_query(F.data == const.REVIEWS)
 async def callback_reviews(callback: CallbackQuery):
-    await log_user(callback.message.chat.id, callback.from_user, REVIEWS)
+    await log_user(callback.message.chat.id, callback.from_user, const.REVIEWS)
     await get_reviews(callback.message)
 
 
-@router.message(Command(REVIEWS))
+@router.message(Command(const.REVIEWS))
 async def command_review(message: Message):
-    await log_user(message.chat.id, message.from_user, REVIEWS)
+    await log_user(message.chat.id, message.from_user, const.REVIEWS)
     await get_reviews(message)
 
 
-@router.callback_query(F.data == MASTER)
+@router.callback_query(F.data == const.MASTER)
 async def callback_menu_master(callback: CallbackQuery):
     ADMIN_CHATS.discard(callback.message.chat.id)
-    await log_user(callback.message.chat.id, callback.from_user, MASTER)
+    await log_user(callback.message.chat.id, callback.from_user, const.MASTER)
     await callback.message.answer(
-        TEXTS[MASTER],
+        TEXTS[const.MASTER],
         parse_mode=ParseMode.HTML,
     )
 
@@ -381,13 +387,13 @@ async def callback_menu_master(callback: CallbackQuery):
 @router.message(Command("load"))
 async def cmd_load(message: Message):
     sent = await message.answer_photo(
-        FSInputFile(BASE_DIR / "IMG_2355.jpg")
+        FSInputFile(BASE_DIR / "IMG_2358.jpg")
     )
     if sent.photo:
         print(sent.photo.pop().file_id)
 
 
-@router.message(F.chat.id == ADMIN_CHAT_ID, F.reply_to_message)
+@router.message(F.chat.id == const.ADMIN_CHAT_ID, F.reply_to_message)
 async def admin_reply(message: Message, bot: Bot):
     original = message.reply_to_message
     if not original or not original.text:
@@ -421,7 +427,7 @@ async def handle_message(message: Message, bot: Bot):
     )
 
     await bot.send_message(
-        ADMIN_CHAT_ID,
+        const.ADMIN_CHAT_ID,
         admin_text,
         parse_mode=ParseMode.HTML
     )
