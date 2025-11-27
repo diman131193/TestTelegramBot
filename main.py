@@ -3,6 +3,7 @@ import logging
 import os
 import json
 import aiosqlite
+import re
 from pathlib import Path
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.enums import ParseMode
@@ -11,7 +12,7 @@ from datetime import datetime, timezone
 from aiogram.filters import Command
 from aiogram.types import (
     Message, FSInputFile, CallbackQuery,
-    InlineKeyboardMarkup, InlineKeyboardButton,
+    InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -20,6 +21,9 @@ TEXTS_PATH = BASE_DIR / "texts.json"
 FILES_PATH = BASE_DIR / "files.json"
 ENV_PATH = BASE_DIR / ".env"
 DB_PATH = BASE_DIR / "contacts.db"
+
+ADMIN_CHAT_ID = 982065213
+ADMIN_CHATS: set[int] = set()
 
 # разделы
 START = "start"
@@ -30,7 +34,7 @@ KERATIN = "keratin"
 BOTOX = "botox"
 NANOPLASTICS = "nanoplastics"
 PRICE = "price"
-COMMENTS = "comments"
+REVIEWS = "reviews"
 SIGNING = "signing"
 CONSULTING = "consulting"
 
@@ -46,7 +50,7 @@ def load_json(path: Path) -> dict:
         return {}
     with path.open(encoding="utf-8") as f:
         data = json.load(f)
-    return {str(k): str(v) for k, v in data.items()}
+    return {str(k): v for k, v in data.items()}
 
 
 TEXTS = load_json(TEXTS_PATH)
@@ -148,43 +152,78 @@ async def log_user(chat_id: int,
         await db.commit()
 
 
-def get_client_services_keyboard() -> InlineKeyboardMarkup:
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                text=TEXTS[f"button_{PRICE}"],
-                callback_data=PRICE
-            ),
-            InlineKeyboardButton(
-                text=TEXTS[f"button_{COMMENTS}"],
-                callback_data=COMMENTS
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text=TEXTS[f"button_{SIGNING}"],
-                url="https://dikidi.ru/1723277"
-            ),
-            InlineKeyboardButton(
-                text=TEXTS[f"button_{CONSULTING}"],
-                callback_data=CONSULTING
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                text=TEXTS[f"button_return_{CLIENT}"],
-                callback_data=CLIENT
-            )
-        ],
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+MASTER_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{MASTER}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=MASTER
+)
 
+CLIENTS_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{CLIENT}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=CLIENT
+)
+
+SERVICES_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{SERVICES}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=SERVICES
+)
+
+PRICE_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{PRICE}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=PRICE
+)
+
+REVIEWS_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{REVIEWS}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=REVIEWS
+)
+
+SIGNING_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{SIGNING}"],
+    parse_mode=ParseMode.HTML,
+    url="https://dikidi.ru/1723277"
+)
+
+CONSULTING_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{CONSULTING}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=CONSULTING
+)
+
+RETURN_CLIENT_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_return_{CLIENT}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=CLIENT
+)
+
+KERATIN_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{KERATIN}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=KERATIN
+)
+
+BOTOX_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{BOTOX}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=BOTOX
+)
+
+NANOPLASTICS_BUTTON = InlineKeyboardButton(
+    text=TEXTS[f"button_{NANOPLASTICS}"],
+    parse_mode=ParseMode.HTML,
+    callback_data=NANOPLASTICS
+)
 
 router = Router()
 
 
 @router.message(Command(START))
 async def command_start(message: Message):
+    ADMIN_CHATS.discard(message.chat.id)
     await log_user(message.chat.id, message.from_user, START)
     await message.answer_photo(
         FILES[START],
@@ -193,18 +232,7 @@ async def command_start(message: Message):
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
             [
-                [
-                    InlineKeyboardButton(
-                        text=TEXTS[f"button_{MASTER}"],
-                        parse_mode=ParseMode.HTML,
-                        callback_data=MASTER
-                    ),
-                    InlineKeyboardButton(
-                        text=TEXTS[f"button_{CLIENT}"],
-                        parse_mode=ParseMode.HTML,
-                        callback_data=CLIENT
-                    ),
-                ],
+                [MASTER_BUTTON, CLIENTS_BUTTON, ],
             ]
         )
     )
@@ -212,6 +240,7 @@ async def command_start(message: Message):
 
 @router.callback_query(F.data == CLIENT)
 async def callback_menu_client(callback: CallbackQuery):
+    ADMIN_CHATS.discard(callback.message.chat.id)
     await log_user(callback.message.chat.id, callback.from_user, CLIENT)
     await callback.message.answer_photo(
         FILES[CLIENT],
@@ -220,20 +249,17 @@ async def callback_menu_client(callback: CallbackQuery):
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
             [
-                [
-                    InlineKeyboardButton(
-                        text=TEXTS[f"button_{SERVICES}"],
-                        parse_mode=ParseMode.HTML,
-                        callback_data=SERVICES
-                    ),
-                ],
+                [SERVICES_BUTTON, ],
+                [PRICE_BUTTON, REVIEWS_BUTTON, ],
+                [SIGNING_BUTTON, CONSULTING_BUTTON, ],
             ]
         )
     )
 
 
 @router.callback_query(F.data == SERVICES)
-async def cb_menu_price(callback: CallbackQuery):
+async def callback_menu_price(callback: CallbackQuery):
+    ADMIN_CHATS.discard(callback.message.chat.id)
     await log_user(callback.message.chat.id, callback.from_user, SERVICES)
     await callback.message.answer_photo(
         FILES[SERVICES],
@@ -242,61 +268,90 @@ async def cb_menu_price(callback: CallbackQuery):
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
             [
-                [
-                    InlineKeyboardButton(
-                        text=TEXTS[f"button_{KERATIN}"],
-                        parse_mode=ParseMode.HTML,
-                        callback_data=KERATIN
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        text=TEXTS[f"button_{BOTOX}"],
-                        parse_mode=ParseMode.HTML,
-                        callback_data=BOTOX
-                    ),
-                ],
-                [
-                    InlineKeyboardButton(
-                        text=TEXTS[f"button_{NANOPLASTICS}"],
-                        parse_mode=ParseMode.HTML,
-                        callback_data=NANOPLASTICS
-                    ),
-                ]
+                [KERATIN_BUTTON, ],
+                [BOTOX_BUTTON, ],
+                [NANOPLASTICS_BUTTON, ],
             ]
         )
     )
 
 
 @router.callback_query(F.data == KERATIN)
-async def callback_menu_client(callback: CallbackQuery):
+async def callback_keratin(callback: CallbackQuery):
+    ADMIN_CHATS.discard(callback.message.chat.id)
     await log_user(callback.message.chat.id, callback.from_user, KERATIN)
     await callback.message.answer_photo(
         FILES[KERATIN],
         caption=TEXTS[KERATIN],
         parse_mode=ParseMode.HTML,
-        reply_markup=get_client_services_keyboard()
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=
+            [
+                [PRICE_BUTTON, REVIEWS_BUTTON, ],
+                [SIGNING_BUTTON, CONSULTING_BUTTON, ],
+                [RETURN_CLIENT_BUTTON, ],
+            ]
+        )
     )
 
 
-@router.callback_query(F.data == MASTER)
-async def callback_menu_master(callback: CallbackQuery):
-    await log_user(callback.message.chat.id, callback.from_user, MASTER)
+@router.callback_query(F.data == CONSULTING)
+async def callback_consulting(callback: CallbackQuery):
+    ADMIN_CHATS.add(callback.message.chat.id)
+    await log_user(callback.message.chat.id, callback.from_user, CONSULTING)
     await callback.message.answer(
-        TEXTS[MASTER],
+        TEXTS[CONSULTING],
+        parse_mode=ParseMode.HTML
+    )
+
+
+async def get_reviews(message: Message):
+    ADMIN_CHATS.discard(message.chat.id)
+    intro = TEXTS[REVIEWS]
+    photo_ids = FILES[REVIEWS]
+
+    if not photo_ids:
+        await message.answer(intro, parse_mode=ParseMode.HTML)
+        return
+
+    media = [
+        InputMediaPhoto(media=pid)
+        for pid in photo_ids
+    ]
+
+    await message.answer_media_group(media)
+
+    await message.answer(
+        intro,
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
             [
-                [
-                    InlineKeyboardButton(
-                        text=TEXTS[f"button_{SERVICES}"],
-                        parse_mode=ParseMode.HTML,
-                        callback_data=SERVICES
-                    ),
-                ],
+                [SIGNING_BUTTON, ]
             ]
         )
+    )
+
+
+@router.callback_query(F.data == REVIEWS)
+async def callback_reviews(callback: CallbackQuery):
+    await log_user(callback.message.chat.id, callback.from_user, REVIEWS)
+    await get_reviews(callback.message)
+
+
+@router.message(Command(REVIEWS))
+async def command_review(message: Message):
+    await log_user(message.chat.id, message.from_user, REVIEWS)
+    await get_reviews(message)
+
+
+@router.callback_query(F.data == MASTER)
+async def callback_menu_master(callback: CallbackQuery):
+    ADMIN_CHATS.discard(callback.message.chat.id)
+    await log_user(callback.message.chat.id, callback.from_user, MASTER)
+    await callback.message.answer(
+        TEXTS[MASTER],
+        parse_mode=ParseMode.HTML,
     )
 
 
@@ -316,12 +371,57 @@ async def callback_menu_master(callback: CallbackQuery):
 
 
 @router.message(Command("load"))
-async def cmd_guid(message: Message):
+async def cmd_load(message: Message):
     sent = await message.answer_photo(
-        FSInputFile(BASE_DIR / "IMG_2287.jpg")
+        FSInputFile(BASE_DIR / "IMG_2329.jpg")
     )
     if sent.photo:
         print(sent.photo.pop().file_id)
+
+
+@router.message(F.chat.id == ADMIN_CHAT_ID, F.reply_to_message)
+async def admin_reply(message: Message, bot: Bot):
+    original = message.reply_to_message
+    if not original or not original.text:
+        return
+
+    match = re.search(r"ID:\s*(\d+)", original.text)
+    if not match:
+        return
+
+    client_chat_id = int(match.group(1))
+
+    await bot.send_message(
+        client_chat_id,
+        message.text
+    )
+
+
+@router.message(F.text & ~F.text.startswith("/"))
+async def handle_message(message: Message, bot: Bot):
+    if message.chat.id not in ADMIN_CHATS:
+        return
+
+    user = message.from_user
+    username = f"@{user.username}" if user.username else "—"
+
+    admin_text = (
+        "📩 <b>Новое сообщение для консультации</b>\n\n"
+        f"<b>От:</b> {user.first_name or ''} {user.last_name or ''} ({username})\n"
+        f"<b>ID:</b> {message.chat.id}\n\n"
+        f"{message.text}"
+    )
+
+    await bot.send_message(
+        ADMIN_CHAT_ID,
+        admin_text,
+        parse_mode=ParseMode.HTML
+    )
+
+    await message.answer(
+        "Отправила твой вопрос мастеру 💛\n"
+        "Она ответит сюда в чат в ближайшее время."
+    )
 
 
 @router.message(F.text)
