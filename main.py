@@ -154,67 +154,56 @@ async def log_user(chat_id: int,
 
 MASTER_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{MASTER}"],
-    parse_mode=ParseMode.HTML,
     callback_data=MASTER
 )
 
 CLIENTS_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{CLIENT}"],
-    parse_mode=ParseMode.HTML,
     callback_data=CLIENT
 )
 
 SERVICES_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{SERVICES}"],
-    parse_mode=ParseMode.HTML,
     callback_data=SERVICES
 )
 
 PRICE_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{PRICE}"],
-    parse_mode=ParseMode.HTML,
     callback_data=PRICE
 )
 
 REVIEWS_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{REVIEWS}"],
-    parse_mode=ParseMode.HTML,
     callback_data=REVIEWS
 )
 
 SIGNING_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{SIGNING}"],
-    parse_mode=ParseMode.HTML,
     url="https://dikidi.ru/1723277"
 )
 
 CONSULTING_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{CONSULTING}"],
-    parse_mode=ParseMode.HTML,
     callback_data=CONSULTING
 )
 
 RETURN_CLIENT_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_return_{CLIENT}"],
-    parse_mode=ParseMode.HTML,
     callback_data=CLIENT
 )
 
 KERATIN_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{KERATIN}"],
-    parse_mode=ParseMode.HTML,
     callback_data=KERATIN
 )
 
 BOTOX_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{BOTOX}"],
-    parse_mode=ParseMode.HTML,
     callback_data=BOTOX
 )
 
 NANOPLASTICS_BUTTON = InlineKeyboardButton(
     text=TEXTS[f"button_{NANOPLASTICS}"],
-    parse_mode=ParseMode.HTML,
     callback_data=NANOPLASTICS
 )
 
@@ -283,6 +272,25 @@ async def callback_keratin(callback: CallbackQuery):
     await callback.message.answer_photo(
         FILES[KERATIN],
         caption=TEXTS[KERATIN],
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=
+            [
+                [PRICE_BUTTON, REVIEWS_BUTTON, ],
+                [SIGNING_BUTTON, CONSULTING_BUTTON, ],
+                [RETURN_CLIENT_BUTTON, ],
+            ]
+        )
+    )
+
+
+@router.callback_query(F.data == BOTOX)
+async def callback_botox(callback: CallbackQuery):
+    ADMIN_CHATS.discard(callback.message.chat.id)
+    await log_user(callback.message.chat.id, callback.from_user, BOTOX)
+    await callback.message.answer_photo(
+        FILES[BOTOX],
+        caption=TEXTS[BOTOX],
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=
@@ -373,7 +381,7 @@ async def callback_menu_master(callback: CallbackQuery):
 @router.message(Command("load"))
 async def cmd_load(message: Message):
     sent = await message.answer_photo(
-        FSInputFile(BASE_DIR / "IMG_2329.jpg")
+        FSInputFile(BASE_DIR / "IMG_2355.jpg")
     )
     if sent.photo:
         print(sent.photo.pop().file_id)
