@@ -1,9 +1,8 @@
 import aiosqlite
 from datetime import datetime, timezone
-from pathlib import Path
+from app.paths import DATA_DIR
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "contacts.db"
+DB_PATH = DATA_DIR / "contacts.db"
 
 
 async def init_db():

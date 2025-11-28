@@ -1,10 +1,9 @@
 import json
 from pathlib import Path
+from app.paths import DATA_DIR
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-TEXTS_PATH = BASE_DIR / "texts.json"
-FILES_PATH = BASE_DIR / "files.json"
+TEXTS_PATH = DATA_DIR / "texts.json"
+FILES_PATH = DATA_DIR / "files.json"
 
 
 def load_json(path: Path) -> dict:
@@ -17,3 +16,19 @@ def load_json(path: Path) -> dict:
 
 TEXTS = load_json(TEXTS_PATH)
 FILES = load_json(FILES_PATH)
+
+
+def text(key: str) -> str:
+    return TEXTS.get(key, f"[no text: {key}]")
+
+
+def button(key: str) -> str:
+    return TEXTS.get(f"button_{key}", f"[no button: {key}]")
+
+
+def file(key: str) -> str:
+    return FILES.get(key, f"[no file: {key}]")
+
+
+def files(key: str) -> list[str]:
+    return FILES.get(key, [])
