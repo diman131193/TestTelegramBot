@@ -4,6 +4,7 @@ from app.paths import DATA_DIR
 
 TEXTS_PATH = DATA_DIR / "texts.json"
 FILES_PATH = DATA_DIR / "files.json"
+TEST_QUESTIONS_PATH = DATA_DIR / "test_questions.json"
 
 
 def load_json(path: Path) -> dict:
@@ -32,3 +33,15 @@ def file(key: str) -> str:
 
 def files(key: str) -> list[str]:
     return FILES.get(key, [])
+
+
+def load_test_questions() -> list[dict]:
+    if not TEST_QUESTIONS_PATH.exists():
+        return []
+    with TEST_QUESTIONS_PATH.open(encoding="utf-8") as f:
+        data = json.load(f)
+    # ожидаем структуру: [{"text": str, "options": [{"text": str, "score": int}, ...]}, ...]
+    return data
+
+
+TEST_QUESTIONS = load_test_questions()

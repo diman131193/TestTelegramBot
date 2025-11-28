@@ -58,6 +58,11 @@ NANOPLASTICS_BUTTON = InlineKeyboardButton(
     callback_data=const.NANOPLASTIC,
 )
 
+TEST_BUTTON = InlineKeyboardButton(
+    text=button(const.TEST),
+    callback_data=const.TEST,
+)
+
 
 def start_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -72,6 +77,7 @@ def client_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [SERVICES_BUTTON],
             [PRICE_BUTTON, REVIEWS_BUTTON],
+            [TEST_BUTTON],
             [SIGNING_BUTTON, CONSULTING_BUTTON],
         ]
     )

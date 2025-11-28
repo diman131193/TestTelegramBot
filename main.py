@@ -4,7 +4,8 @@ import os
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 import app.db as db
-import app.handlers as handlers
+from app.handlers import router as main_router
+from app.handlers_test import router as test_router
 from app.paths import BASE_DIR
 
 ENV_PATH = BASE_DIR / ".env"
@@ -19,7 +20,8 @@ logging.basicConfig(level=logging.INFO)
 async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
-    dp.include_router(handlers.router)
+    dp.include_router(main_router)
+    dp.include_router(test_router)
     await db.init_db()
     await dp.start_polling(bot)
 
