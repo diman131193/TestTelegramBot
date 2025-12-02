@@ -1,4 +1,6 @@
-from typing import Dict, Any
+from __future__ import annotations
+
+from typing import Dict, Any, List, Optional
 
 from aiogram import Router, F
 from aiogram.enums import ParseMode
@@ -11,124 +13,134 @@ from aiogram.types import (
 
 import app.const as const
 import app.db as db
-from app.texts import text, TEST_QUESTIONS
+from app.texts import TEXTS, TEST_CONFIG, ADVICES
 import app.keyboards as keyboards
-from app.handlers import ADMIN_CHATS  # используем общий сет для консультации
+from app.handlers import ADMIN_CHATS
 
 router = Router()
 
-TEST_PROGRESS: Dict[int, Dict[str, Any]] = {}
+TEST_PROGRESS: Dict[int, Any] = {}
+TEST_RULES = TEST_CONFIG.get("rules", [])
+TEST_QUESTIONS = TEST_CONFIG.get("questions", {})
+TEST_START = TEST_CONFIG.get("start")
 
 
-@router.callback_query(F.data == const.TEST)
-async def callback_test(callback: CallbackQuery):
-    chat_id = callback.message.chat.id
-    ADMIN_CHATS.discard(callback.message.chat.id)
-    await db.log_user(callback.message.chat.id, callback.from_user, const.TEST)
-    # инициализируем прогресс
-    TEST_PROGRESS[chat_id] = {"index": 0, "score": 0}
+async def send_test_question(message: Message, chat_id: int, question_id: str):
+    if not TEST_START or not TEST_QUESTIONS or not question_id:
+        await message.answer(
+            "Тест временно недоступен — вопросы не найдены 🕊",
+            parse_mode=ParseMode.HTML,
+        )
+        return
 
-    # intro + первый вопрос
-    intro = text(const.TEST)
-    if intro:
-        await callback.message.answer(intro, parse_mode=ParseMode.HTML)
+    question = TEST_QUESTIONS.get(question_id)
 
-    await send_test_question(callback.message, chat_id)
-    await callback.answer()
-
-
-async def send_test_question(message: Message, chat_id: int):
-    progress = TEST_PROGRESS.get(chat_id)
-    if progress is None:
-        # на всякий случай инициализация
-        progress = {"index": 0, "score": 0}
-        TEST_PROGRESS[chat_id] = progress
-
-    idx = progress["index"]
-
-    # если вопросы кончились — показываем результат
-    if idx >= len(TEST_QUESTIONS):
+    if not question:
+        # если по какой-то причине вопрос не найден — сразу уходим в результат по path
         await send_test_result(message, chat_id)
         return
 
-    q = TEST_QUESTIONS[idx]
+    options = question.get("options", [])
+    if not options:
+        await send_test_result(message, chat_id)
+        return
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text=opt["text"],
-                    callback_data=f"{const.TEST}:{idx}:{opt['score']}",
+                    # callback_data: "test:<answer_id>:<next_question_id>"
+                    callback_data=f"{const.TEST}:{opt['id']}:{opt['next']}",
                 )
             ]
-            for opt in q["options"]
+            for opt in options
         ]
     )
 
     await message.answer(
-        f"<b>Вопрос {idx + 1} из {len(TEST_QUESTIONS)}</b>\n\n{q['text']}",
+        question["text"],
         parse_mode=ParseMode.HTML,
         reply_markup=keyboard,
     )
 
 
 async def send_test_result(message: Message, chat_id: int):
-    progress = TEST_PROGRESS[chat_id]
-    if progress is None:
-        return
+    progress = TEST_PROGRESS.get(chat_id)
+    answers: List[str] = progress["answers"] if progress else []
 
-    total = progress["score"]
-    # очищаем состояние
     TEST_PROGRESS.pop(chat_id, None)
 
-    # границы можешь подправить на вкус
-    if total <= 3:
-        result = text(const.TEST + "_result_low")
-    elif total <= 7:
-        result = text(const.TEST + "_result_medium")
+    advice_key = None
+
+    print(progress)
+
+    if answers:
+        key = "|".join(answers)
+        advice_key = TEST_RULES.get(key)
+
+    print(advice_key)
+
+    if advice_key is None:
+        # Если конкретного правила нет — мягкий фолбэк
+        text = (
+            "Я сохранила твои ответы 💛\n\n"
+            "Сейчас у меня нет готового подробного алгоритма именно под такую комбинацию, "
+            "но ты можешь написать в консультацию, и я разберу твой случай персонально."
+        )
     else:
-        result = text(const.TEST + "_result_high")
+        text = "TEST"#ADVICES.get(advice_key)
 
     await message.answer(
-        result,
+        text,
         parse_mode=ParseMode.HTML,
         reply_markup=keyboards.client_keyboard(),
     )
 
 
-@router.callback_query(F.data.startswith(const.TEST + ":"))
+@router.callback_query(F.data == const.TEST)
+async def callback_test_start(callback: CallbackQuery):
+    chat_id = callback.message.chat.id
+    ADMIN_CHATS.discard(chat_id)
+    await db.log_user(chat_id, callback.from_user, const.TEST)
+
+    TEST_PROGRESS[chat_id] = {"answers": []}
+
+    await send_test_question(callback.message, chat_id, TEST_START)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith(f"{const.TEST}:"))
 async def callback_test_answer(callback: CallbackQuery):
+    """
+    Обработка ответов:
+    callback_data = "test:<answer_id>:<next_question_id>"
+    """
     parts = callback.data.split(":")
     if len(parts) != 3:
         await callback.answer()
         return
 
-    _, q_idx_str, score_str = parts
-
-    try:
-        q_idx = int(q_idx_str)
-        score = int(score_str)
-    except ValueError:
-        await callback.answer()
-        return
+    _, answer_id, next_question_id = parts
 
     chat_id = callback.message.chat.id
+
+    # проверяем и обновляем прогресс
     progress = TEST_PROGRESS.get(chat_id)
-
-    # если по какой-то причине состояние потерялось — начнем заново
     if progress is None:
-        TEST_PROGRESS[chat_id] = {"index": 0, "score": 0}
-        progress = TEST_PROGRESS[chat_id]
+        # если по какой-то причине состояние потерялось — стартуем заново
+        progress = {"answers": []}
+        TEST_PROGRESS[chat_id] = progress
 
-    # принимаем только “ожидаемый” вопрос
-    if q_idx != progress["index"]:
-        await callback.answer("Этот вопрос уже обработан 😊", show_alert=False)
-        return
+    progress["answers"].append(answer_id)
 
-    # обновляем прогресс
-    progress["score"] += score
-    progress["index"] += 1
+    print(progress["answers"])
 
-    # следующий вопрос или результат
-    await send_test_question(callback.message, chat_id)
+    if next_question_id == "advice":
+        await send_test_result(callback.message, chat_id)
+    elif next_question_id and next_question_id in TEST_QUESTIONS:
+        await send_test_question(callback.message, chat_id, next_question_id)
+    else:
+        await send_test_result(callback.message, chat_id)
+
     await callback.answer()

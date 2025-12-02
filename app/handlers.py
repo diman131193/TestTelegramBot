@@ -43,6 +43,7 @@ async def callback_menu_client(callback: CallbackQuery):
         parse_mode=ParseMode.HTML,
         reply_markup=keyboards.client_keyboard()
     )
+    await callback.answer()
 
 
 @router.callback_query(F.data == const.SERVICES)
@@ -55,6 +56,7 @@ async def callback_menu_price(callback: CallbackQuery):
         parse_mode=ParseMode.HTML,
         reply_markup=keyboards.services_keyboard()
     )
+    await callback.answer()
 
 
 @router.callback_query(F.data == const.KERATIN)
@@ -67,6 +69,7 @@ async def callback_keratin(callback: CallbackQuery):
         parse_mode=ParseMode.HTML,
         reply_markup=keyboards.services_menu_keyboard()
     )
+    await callback.answer()
 
 
 @router.callback_query(F.data == const.BOTOX)
@@ -79,6 +82,7 @@ async def callback_botox(callback: CallbackQuery):
         parse_mode=ParseMode.HTML,
         reply_markup=keyboards.services_menu_keyboard()
     )
+    await callback.answer()
 
 
 @router.callback_query(F.data == const.NANOPLASTIC)
@@ -91,6 +95,7 @@ async def callback_botox(callback: CallbackQuery):
         parse_mode=ParseMode.HTML,
         reply_markup=keyboards.services_menu_keyboard()
     )
+    await callback.answer()
 
 
 @router.callback_query(F.data == const.CONSULTING)
@@ -101,6 +106,7 @@ async def callback_consulting(callback: CallbackQuery):
         text(const.CONSULTING),
         parse_mode=ParseMode.HTML
     )
+    await callback.answer()
 
 
 async def get_reviews(message: Message):
@@ -130,6 +136,7 @@ async def get_reviews(message: Message):
 async def callback_reviews(callback: CallbackQuery):
     await db.log_user(callback.message.chat.id, callback.from_user, const.REVIEWS)
     await get_reviews(callback.message)
+    await callback.answer()
 
 
 @router.message(Command(const.REVIEWS))
@@ -146,6 +153,7 @@ async def callback_menu_master(callback: CallbackQuery):
         text(const.MASTER),
         parse_mode=ParseMode.HTML,
     )
+    await callback.answer()
 
 
 # @router.message(Command("guid"))

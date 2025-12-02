@@ -4,6 +4,7 @@ from app.paths import DATA_DIR
 
 TEXTS_PATH = DATA_DIR / "texts.json"
 FILES_PATH = DATA_DIR / "files.json"
+ADVICES_PATH = DATA_DIR / "advices.json"
 TEST_QUESTIONS_PATH = DATA_DIR / "test_questions.json"
 
 
@@ -17,6 +18,7 @@ def load_json(path: Path) -> dict:
 
 TEXTS = load_json(TEXTS_PATH)
 FILES = load_json(FILES_PATH)
+ADVICES = load_json(ADVICES_PATH)
 
 
 def text(key: str) -> str:
@@ -35,13 +37,18 @@ def files(key: str) -> list[str]:
     return FILES.get(key, [])
 
 
-def load_test_questions() -> list[dict]:
+def load_test_config() -> dict:
     if not TEST_QUESTIONS_PATH.exists():
-        return []
+        return {"start": None, "questions": {}, "rules": []}
+
     with TEST_QUESTIONS_PATH.open(encoding="utf-8") as f:
         data = json.load(f)
-    # ожидаем структуру: [{"text": str, "options": [{"text": str, "score": int}, ...]}, ...]
-    return data
+
+    start = data.get("start")
+    questions = data.get("questions", {})
+    rules = data.get("rules", [])
+
+    return {"start": start, "questions": questions, "rules": rules}
 
 
-TEST_QUESTIONS = load_test_questions()
+TEST_CONFIG = load_test_config()
