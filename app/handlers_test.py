@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from aiogram import Router, F
 from aiogram.enums import ParseMode
@@ -73,13 +73,9 @@ async def send_test_result(message: Message, chat_id: int):
 
     advice_key = None
 
-    print(progress)
-
     if answers:
         key = "|".join(answers)
         advice_key = TEST_RULES.get(key)
-
-    print(advice_key)
 
     if advice_key is None:
         # Если конкретного правила нет — мягкий фолбэк
@@ -89,7 +85,7 @@ async def send_test_result(message: Message, chat_id: int):
             "но ты можешь написать в консультацию, и я разберу твой случай персонально."
         )
     else:
-        text = "TEST"#ADVICES.get(advice_key)
+        text = ADVICES.get(advice_key, "No advices")
 
     await message.answer(
         text,
