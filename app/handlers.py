@@ -12,13 +12,86 @@ from aiogram.types import (
 
 import app.const as const
 import app.db as db
-from app.texts import text, file, files
+from app.texts import text, file, files, button
 import app.keyboards as keyboards
 from app.paths import DATA_DIR
 
 router = Router()
 
 ADMIN_CHATS: set[int] = set()
+
+
+async def send_client_menu(message: Message, user):
+    ADMIN_CHATS.discard(message.chat.id)
+    await db.log_user(message.chat.id, user, const.CLIENT)
+    name = user.first_name if user else ""
+    await message.answer_photo(
+        file(const.CLIENT),
+        caption=text(const.CLIENT).format(name=name),
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboards.client_keyboard()
+    )
+
+
+async def send_services_menu(message: Message, user):
+    ADMIN_CHATS.discard(message.chat.id)
+    await db.log_user(message.chat.id, user, const.SERVICES)
+    await message.answer_photo(
+        file(const.SERVICES),
+        caption=text(const.SERVICES),
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboards.services_keyboard()
+    )
+
+
+async def send_service(message: Message, user, service: str):
+    ADMIN_CHATS.discard(message.chat.id)
+    await db.log_user(message.chat.id, user, service)
+    await message.answer_photo(
+        file(service),
+        caption=text(service),
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboards.services_menu_keyboard()
+    )
+
+
+async def send_consulting(message: Message, user):
+    ADMIN_CHATS.add(message.chat.id)
+    await db.log_user(message.chat.id, user, const.CONSULTING)
+    await message.answer(
+        text(const.CONSULTING),
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboards.client_keyboard()
+    )
+
+
+async def send_master_menu(message: Message, user):
+    ADMIN_CHATS.discard(message.chat.id)
+    await db.log_user(message.chat.id, user, const.MASTER)
+    await message.answer(
+        text(const.MASTER),
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboards.master_keyboard(),
+    )
+
+
+async def send_price(message: Message, user):
+    ADMIN_CHATS.discard(message.chat.id)
+    await db.log_user(message.chat.id, user, const.PRICE)
+    await message.answer(
+        text(const.PRICE),
+        parse_mode=ParseMode.HTML,
+        reply_markup=keyboards.services_menu_keyboard(),
+    )
+
+
+async def send_signing(message: Message, user):
+    ADMIN_CHATS.discard(message.chat.id)
+    await db.log_user(message.chat.id, user, const.SIGNING)
+    await message.answer(
+        f"Записаться можно по ссылке:\n{keyboards.SIGNING_URL}",
+        reply_markup=keyboards.client_keyboard(),
+    )
 
 
 @router.message(Command(const.START))
@@ -35,77 +108,37 @@ async def command_start(message: Message):
 
 @router.callback_query(F.data == const.CLIENT)
 async def callback_menu_client(callback: CallbackQuery):
-    ADMIN_CHATS.discard(callback.message.chat.id)
-    await db.log_user(callback.message.chat.id, callback.from_user, const.CLIENT)
-    await callback.message.answer_photo(
-        file(const.CLIENT),
-        caption=text(const.CLIENT).format(name=callback.from_user.first_name),
-        parse_mode=ParseMode.HTML,
-        reply_markup=keyboards.client_keyboard()
-    )
+    await send_client_menu(callback.message, callback.from_user)
     await callback.answer()
 
 
 @router.callback_query(F.data == const.SERVICES)
 async def callback_menu_price(callback: CallbackQuery):
-    ADMIN_CHATS.discard(callback.message.chat.id)
-    await db.log_user(callback.message.chat.id, callback.from_user, const.SERVICES)
-    await callback.message.answer_photo(
-        file(const.SERVICES),
-        caption=text(const.SERVICES),
-        parse_mode=ParseMode.HTML,
-        reply_markup=keyboards.services_keyboard()
-    )
+    await send_services_menu(callback.message, callback.from_user)
     await callback.answer()
 
 
 @router.callback_query(F.data == const.KERATIN)
 async def callback_keratin(callback: CallbackQuery):
-    ADMIN_CHATS.discard(callback.message.chat.id)
-    await db.log_user(callback.message.chat.id, callback.from_user, const.KERATIN)
-    await callback.message.answer_photo(
-        file(const.KERATIN),
-        caption=text(const.KERATIN),
-        parse_mode=ParseMode.HTML,
-        reply_markup=keyboards.services_menu_keyboard()
-    )
+    await send_service(callback.message, callback.from_user, const.KERATIN)
     await callback.answer()
 
 
 @router.callback_query(F.data == const.BOTOX)
 async def callback_botox(callback: CallbackQuery):
-    ADMIN_CHATS.discard(callback.message.chat.id)
-    await db.log_user(callback.message.chat.id, callback.from_user, const.BOTOX)
-    await callback.message.answer_photo(
-        file(const.BOTOX),
-        caption=text(const.BOTOX),
-        parse_mode=ParseMode.HTML,
-        reply_markup=keyboards.services_menu_keyboard()
-    )
+    await send_service(callback.message, callback.from_user, const.BOTOX)
     await callback.answer()
 
 
 @router.callback_query(F.data == const.NANOPLASTIC)
 async def callback_botox(callback: CallbackQuery):
-    ADMIN_CHATS.discard(callback.message.chat.id)
-    await db.log_user(callback.message.chat.id, callback.from_user, const.NANOPLASTIC)
-    await callback.message.answer_photo(
-        file(const.NANOPLASTIC),
-        caption=text(const.NANOPLASTIC),
-        parse_mode=ParseMode.HTML,
-        reply_markup=keyboards.services_menu_keyboard()
-    )
+    await send_service(callback.message, callback.from_user, const.NANOPLASTIC)
     await callback.answer()
 
 
 @router.callback_query(F.data == const.CONSULTING)
 async def callback_consulting(callback: CallbackQuery):
-    ADMIN_CHATS.add(callback.message.chat.id)
-    await db.log_user(callback.message.chat.id, callback.from_user, const.CONSULTING)
-    await callback.message.answer(
-        text(const.CONSULTING),
-        parse_mode=ParseMode.HTML
-    )
+    await send_consulting(callback.message, callback.from_user)
     await callback.answer()
 
 
@@ -147,13 +180,65 @@ async def command_review(message: Message):
 
 @router.callback_query(F.data == const.MASTER)
 async def callback_menu_master(callback: CallbackQuery):
-    ADMIN_CHATS.discard(callback.message.chat.id)
-    await db.log_user(callback.message.chat.id, callback.from_user, const.MASTER)
-    await callback.message.answer(
-        text(const.MASTER),
-        parse_mode=ParseMode.HTML,
-    )
+    await send_master_menu(callback.message, callback.from_user)
     await callback.answer()
+
+
+@router.callback_query(F.data == const.PRICE)
+async def callback_price(callback: CallbackQuery):
+    await send_price(callback.message, callback.from_user)
+    await callback.answer()
+
+
+@router.message(F.text == button(const.CLIENT), ~F.reply_to_message)
+async def message_menu_client(message: Message):
+    await send_client_menu(message, message.from_user)
+
+
+@router.message(F.text == button(const.MASTER), ~F.reply_to_message)
+async def message_menu_master(message: Message):
+    await send_master_menu(message, message.from_user)
+
+
+@router.message(F.text == button(const.SERVICES), ~F.reply_to_message)
+async def message_menu_services(message: Message):
+    await send_services_menu(message, message.from_user)
+
+
+@router.message(F.text == button(const.KERATIN), ~F.reply_to_message)
+async def message_keratin(message: Message):
+    await send_service(message, message.from_user, const.KERATIN)
+
+
+@router.message(F.text == button(const.BOTOX), ~F.reply_to_message)
+async def message_botox(message: Message):
+    await send_service(message, message.from_user, const.BOTOX)
+
+
+@router.message(F.text == button(const.NANOPLASTIC), ~F.reply_to_message)
+async def message_nanoplastic(message: Message):
+    await send_service(message, message.from_user, const.NANOPLASTIC)
+
+
+@router.message(F.text == button(const.PRICE), ~F.reply_to_message)
+async def message_price(message: Message):
+    await send_price(message, message.from_user)
+
+
+@router.message(F.text == button(const.REVIEWS), ~F.reply_to_message)
+async def message_reviews(message: Message):
+    await db.log_user(message.chat.id, message.from_user, const.REVIEWS)
+    await get_reviews(message)
+
+
+@router.message(F.text == button(const.SIGNING), ~F.reply_to_message)
+async def message_signing(message: Message):
+    await send_signing(message, message.from_user)
+
+
+@router.message(F.text == button(const.CONSULTING), ~F.reply_to_message)
+async def message_consulting(message: Message):
+    await send_consulting(message, message.from_user)
 
 
 # @router.message(Command("guid"))

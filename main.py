@@ -12,8 +12,8 @@ logging.basicConfig(level=logging.INFO)
 async def main():
     bot = Bot(token=get_bot_token())
     dp = Dispatcher()
-    dp.include_router(main_router)
     dp.include_router(test_router)
+    dp.include_router(main_router)
     await db.init_db()
     await dp.start_polling(bot)
 

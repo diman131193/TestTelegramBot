@@ -1,119 +1,67 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
 import app.const as const
 from app.texts import button
 
-MASTER_BUTTON = InlineKeyboardButton(
-    text=button(const.MASTER),
-    callback_data=const.MASTER,
-)
-
-CLIENTS_BUTTON = InlineKeyboardButton(
-    text=button(const.CLIENT),
-    callback_data=const.CLIENT,
-)
-
-SERVICES_BUTTON = InlineKeyboardButton(
-    text=button(const.SERVICES),
-    callback_data=const.SERVICES,
-)
-
-PRICE_BUTTON = InlineKeyboardButton(
-    text=button(const.PRICE),
-    callback_data=const.PRICE,
-)
-
-REVIEWS_BUTTON = InlineKeyboardButton(
-    text=button(const.REVIEWS),
-    callback_data=const.REVIEWS,
-)
-
-SIGNING_BUTTON = InlineKeyboardButton(
-    text=button(const.SIGNING),
-    url="https://dikidi.ru/1723277",
-)
-
-CONSULTING_BUTTON = InlineKeyboardButton(
-    text=button(const.CONSULTING),
-    callback_data=const.CONSULTING,
-)
-
-RETURN_CLIENT_BUTTON = InlineKeyboardButton(
-    text=button(const.CLIENT),
-    callback_data=const.CLIENT,
-)
-
-KERATIN_BUTTON = InlineKeyboardButton(
-    text=button(const.KERATIN),
-    callback_data=const.KERATIN,
-)
-
-BOTOX_BUTTON = InlineKeyboardButton(
-    text=button(const.BOTOX),
-    callback_data=const.BOTOX,
-)
-
-NANOPLASTICS_BUTTON = InlineKeyboardButton(
-    text=button(const.NANOPLASTIC),
-    callback_data=const.NANOPLASTIC,
-)
-
-TEST_BUTTON = InlineKeyboardButton(
-    text=button(const.TEST),
-    callback_data=const.TEST,
-)
+SIGNING_URL = "https://dikidi.ru/1723277"
 
 
-def start_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [MASTER_BUTTON, CLIENTS_BUTTON],
-        ]
+def _button(key: str) -> KeyboardButton:
+    return KeyboardButton(text=button(key))
+
+
+def _keyboard(rows: list[list[str]]) -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [_button(key) for key in row]
+            for row in rows
+        ],
+        resize_keyboard=True,
+        input_field_placeholder="Выберите действие",
     )
 
 
-def client_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [SERVICES_BUTTON],
-            [PRICE_BUTTON, REVIEWS_BUTTON],
-            [TEST_BUTTON],
-            [SIGNING_BUTTON, CONSULTING_BUTTON],
-        ]
-    )
+def start_keyboard() -> ReplyKeyboardMarkup:
+    return _keyboard([
+        [const.MASTER, const.CLIENT],
+    ])
 
 
-def services_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [KERATIN_BUTTON],
-            [BOTOX_BUTTON],
-            [NANOPLASTICS_BUTTON],
-        ]
-    )
+def client_keyboard() -> ReplyKeyboardMarkup:
+    return _keyboard([
+        [const.SERVICES],
+        [const.PRICE, const.REVIEWS],
+        [const.TEST],
+        [const.SIGNING, const.CONSULTING],
+    ])
 
 
-def services_menu_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [PRICE_BUTTON, REVIEWS_BUTTON],
-            [SIGNING_BUTTON, CONSULTING_BUTTON],
-            [RETURN_CLIENT_BUTTON],
-        ]
-    )
+def services_keyboard() -> ReplyKeyboardMarkup:
+    return _keyboard([
+        [const.KERATIN],
+        [const.BOTOX],
+        [const.NANOPLASTIC],
+        [const.CLIENT],
+    ])
 
 
-def reviews_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [SIGNING_BUTTON],
-        ]
-    )
+def services_menu_keyboard() -> ReplyKeyboardMarkup:
+    return _keyboard([
+        [const.PRICE, const.REVIEWS],
+        [const.SIGNING, const.CONSULTING],
+        [const.CLIENT],
+    ])
 
 
-def master_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [SERVICES_BUTTON],
-        ]
-    )
+def reviews_keyboard() -> ReplyKeyboardMarkup:
+    return _keyboard([
+        [const.SIGNING],
+        [const.CLIENT],
+    ])
+
+
+def master_keyboard() -> ReplyKeyboardMarkup:
+    return _keyboard([
+        [const.SERVICES],
+        [const.CLIENT],
+    ])

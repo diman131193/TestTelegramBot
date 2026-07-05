@@ -13,7 +13,7 @@ from aiogram.types import (
 
 import app.const as const
 import app.db as db
-from app.texts import TEXTS, TEST_CONFIG, ADVICES
+from app.texts import TEXTS, TEST_CONFIG, ADVICES, button
 import app.keyboards as keyboards
 from app.handlers import ADMIN_CHATS
 
@@ -104,6 +104,17 @@ async def callback_test_start(callback: CallbackQuery):
 
     await send_test_question(callback.message, chat_id, TEST_START)
     await callback.answer()
+
+
+@router.message(F.text == button(const.TEST), ~F.reply_to_message)
+async def message_test_start(message: Message):
+    chat_id = message.chat.id
+    ADMIN_CHATS.discard(chat_id)
+    await db.log_user(chat_id, message.from_user, const.TEST)
+
+    TEST_PROGRESS[chat_id] = {"answers": []}
+
+    await send_test_question(message, chat_id, TEST_START)
 
 
 @router.callback_query(F.data.startswith(f"{const.TEST}:"))
