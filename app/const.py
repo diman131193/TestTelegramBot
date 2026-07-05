@@ -1,4 +1,6 @@
-ADMIN_CHAT_ID: int = 982065213
+from app.config import get_admin_chat_id
+
+ADMIN_CHAT_ID: int = get_admin_chat_id()
 
 START = "start"
 CLIENT = "client"

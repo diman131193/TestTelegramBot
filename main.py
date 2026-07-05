@@ -1,24 +1,16 @@
 import asyncio
 import logging
-import os
 from aiogram import Bot, Dispatcher
-from dotenv import load_dotenv
 import app.db as db
+from app.config import get_bot_token
 from app.handlers import router as main_router
 from app.handlers_test import router as test_router
-from app.paths import BASE_DIR
-
-ENV_PATH = BASE_DIR / ".env"
-
-load_dotenv(ENV_PATH)
-
-BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO)
 
 
 async def main():
-    bot = Bot(token=BOT_TOKEN)
+    bot = Bot(token=get_bot_token())
     dp = Dispatcher()
     dp.include_router(main_router)
     dp.include_router(test_router)
