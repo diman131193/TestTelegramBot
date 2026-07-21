@@ -1,0 +1,143 @@
+{
+  "answers": {
+    "1.1": {
+      "labels": {"hair_state": "natural"},
+      "scores": {"chemical_risk": 0, "damage": 0}
+    },
+    "1.2": {
+      "labels": {"hair_state": "colored"},
+      "scores": {"chemical_risk": 1, "damage": 1}
+    },
+    "1.3": {
+      "labels": {"hair_state": "growing_out_color"},
+      "scores": {"chemical_risk": 1, "damage": 1, "uneven_porosity": 2}
+    },
+    "1.4": {
+      "labels": {"hair_state": "full_blond"},
+      "scores": {"chemical_risk": 3, "damage": 3, "dryness": 2}
+    },
+    "1.5": {
+      "labels": {"hair_state": "partial_blond"},
+      "scores": {"chemical_risk": 2, "damage": 2, "dryness": 1}
+    },
+    "1.6": {
+      "labels": {"hair_state": "recent_lightening"},
+      "scores": {"chemical_risk": 4, "damage": 4, "dryness": 2},
+      "tags": ["needs_consultation"]
+    },
+    "1.7": {
+      "labels": {"hair_state": "unknown"},
+      "scores": {"chemical_risk": 1, "uncertainty": 2},
+      "tags": ["needs_consultation"]
+    },
+    "2.1": {
+      "labels": {"length": "short"},
+      "scores": {"volume_sensitivity": 2}
+    },
+    "2.2": {
+      "labels": {"length": "medium"},
+      "scores": {"volume_sensitivity": 1}
+    },
+    "2.3": {
+      "labels": {"length": "long"},
+      "scores": {"dryness": 1, "length_load": 2}
+    },
+    "2.4": {
+      "labels": {"length": "very_long"},
+      "scores": {"dryness": 2, "length_load": 3}
+    },
+    "3.1": {
+      "labels": {"main_problem": "no_volume"},
+      "scores": {"volume_loss": 4}
+    },
+    "3.2": {
+      "labels": {"main_problem": "oily_roots"},
+      "scores": {"oiliness": 4}
+    },
+    "3.3": {
+      "labels": {"main_problem": "shape_control"},
+      "scores": {"frizz": 3, "shape_control": 4}
+    },
+    "3.4": {
+      "labels": {"main_problem": "dryness"},
+      "scores": {"dryness": 4, "damage": 1}
+    },
+    "4.1": {
+      "labels": {"wash_frequency": "daily"},
+      "scores": {"oiliness": 2, "scalp_load": 1}
+    },
+    "4.2": {
+      "labels": {"wash_frequency": "every_other_day"},
+      "scores": {"oiliness": 1}
+    },
+    "4.3": {
+      "labels": {"wash_frequency": "every_3_4_days"},
+      "scores": {"oiliness": 0}
+    },
+    "5.1": {
+      "labels": {"daily_reason": "oily_roots_and_no_volume"},
+      "scores": {"oiliness": 3, "volume_loss": 2}
+    },
+    "5.2": {
+      "labels": {"daily_reason": "freshness_habit"},
+      "scores": {"scalp_load": 1}
+    },
+    "5.3": {
+      "labels": {"daily_reason": "styling_residue"},
+      "scores": {"scalp_load": 3, "styling_residue": 4}
+    },
+    "5.4": {
+      "labels": {"daily_reason": "dirty_roots"},
+      "scores": {"oiliness": 4, "scalp_load": 2}
+    },
+    "6.1": {
+      "labels": {"day_evening_state": "oily_roots"},
+      "scores": {"oiliness": 3}
+    },
+    "6.2": {
+      "labels": {"day_evening_state": "volume_loss_without_oiliness"},
+      "scores": {"volume_loss": 3}
+    },
+    "6.3": {
+      "labels": {"day_evening_state": "scalp_discomfort"},
+      "scores": {"scalp_discomfort": 4},
+      "tags": ["needs_consultation"]
+    },
+    "6.4": {
+      "labels": {"day_evening_state": "normal_habit"},
+      "scores": {"scalp_load": 1}
+    },
+    "7.1": {
+      "labels": {"wash_day_state": "heavy_oily_roots"},
+      "scores": {"oiliness": 3, "scalp_load": 2}
+    },
+    "7.2": {
+      "labels": {"wash_day_state": "volume_loss_without_oiliness"},
+      "scores": {"volume_loss": 3}
+    },
+    "7.3": {
+      "labels": {"wash_day_state": "shape_problem"},
+      "scores": {"shape_control": 3, "frizz": 2}
+    },
+    "7.4": {
+      "labels": {"wash_day_state": "normal_habit"},
+      "scores": {"balance": 2}
+    },
+    "8.1": {
+      "labels": {"styling": "air_dry"},
+      "scores": {"volume_loss": 1, "shape_control": 1}
+    },
+    "8.2": {
+      "labels": {"styling": "blow_dry_no_roots"},
+      "scores": {"volume_loss": 2}
+    },
+    "8.3": {
+      "labels": {"styling": "brushing"},
+      "scores": {"heat_damage": 1, "volume_support": 2}
+    },
+    "8.4": {
+      "labels": {"styling": "hot_tools"},
+      "scores": {"heat_damage": 4, "dryness": 2, "damage": 2}
+    }
+  }
+}

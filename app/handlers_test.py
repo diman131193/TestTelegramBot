@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from aiogram import Router, F
 from aiogram.enums import ParseMode
@@ -13,27 +13,52 @@ from aiogram.types import (
 
 import app.const as const
 import app.db as db
-from app.texts import TEXTS, TEST_CONFIG, ADVICES, button
+from app.diagnostics import build_recommendation
+from app.texts import load_test_config, button
 import app.keyboards as keyboards
 from app.handlers import ADMIN_CHATS
 
 router = Router()
 
 TEST_PROGRESS: Dict[int, Any] = {}
-TEST_RULES = TEST_CONFIG.get("rules", [])
-TEST_QUESTIONS = TEST_CONFIG.get("questions", {})
-TEST_START = TEST_CONFIG.get("start")
+
+
+async def get_progress(chat_id: int) -> dict[str, Any] | None:
+    progress = TEST_PROGRESS.get(chat_id)
+    if progress is not None:
+        return progress
+    progress = await db.load_diagnostic_session(chat_id)
+    if progress is not None:
+        TEST_PROGRESS[chat_id] = progress
+    return progress
+
+
+async def save_progress(chat_id: int, progress: dict[str, Any]):
+    TEST_PROGRESS[chat_id] = progress
+    await db.save_diagnostic_session(
+        chat_id,
+        progress.get("answers", []),
+        progress.get("question_id", ""),
+    )
+
+
+async def clear_progress(chat_id: int):
+    TEST_PROGRESS.pop(chat_id, None)
+    await db.delete_diagnostic_session(chat_id)
 
 
 async def send_test_question(message: Message, chat_id: int, question_id: str):
-    if not TEST_START or not TEST_QUESTIONS or not question_id:
+    test_config = load_test_config()
+    test_questions = test_config.get("questions", {})
+    test_start = test_config.get("start")
+    if not test_start or not test_questions or not question_id:
         await message.answer(
             "Тест временно недоступен — вопросы не найдены 🕊",
             parse_mode=ParseMode.HTML,
         )
         return
 
-    question = TEST_QUESTIONS.get(question_id)
+    question = test_questions.get(question_id)
 
     if not question:
         # если по какой-то причине вопрос не найден — сразу уходим в результат по path
@@ -44,6 +69,10 @@ async def send_test_question(message: Message, chat_id: int, question_id: str):
     if not options:
         await send_test_result(message, chat_id)
         return
+
+    progress = await get_progress(chat_id) or {"answers": []}
+    progress["question_id"] = question_id
+    await save_progress(chat_id, progress)
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -66,32 +95,15 @@ async def send_test_question(message: Message, chat_id: int, question_id: str):
 
 
 async def send_test_result(message: Message, chat_id: int):
-    progress = TEST_PROGRESS.get(chat_id)
-    answers: List[str] = progress["answers"] if progress else []
-
-    TEST_PROGRESS.pop(chat_id, None)
-
-    advice_key = None
-
-    if answers:
-        key = "|".join(answers)
-        advice_key = TEST_RULES.get(key)
-
-    if advice_key is None:
-        # Если конкретного правила нет — мягкий фолбэк
-        text = (
-            "Я сохранила твои ответы 💛\n\n"
-            "Сейчас у меня нет готового подробного алгоритма именно под такую комбинацию, "
-            "но ты можешь написать в консультацию, и я разберу твой случай персонально."
-        )
-    else:
-        text = ADVICES.get(advice_key, "No advices")
+    progress = await get_progress(chat_id)
+    answers = progress["answers"] if progress else []
 
     await message.answer(
-        text,
+        build_recommendation(answers),
         parse_mode=ParseMode.HTML,
         reply_markup=keyboards.client_keyboard(),
     )
+    await clear_progress(chat_id)
 
 
 @router.callback_query(F.data == const.TEST)
@@ -100,9 +112,9 @@ async def callback_test_start(callback: CallbackQuery):
     ADMIN_CHATS.discard(chat_id)
     await db.log_user(chat_id, callback.from_user, const.TEST)
 
-    TEST_PROGRESS[chat_id] = {"answers": []}
-
-    await send_test_question(callback.message, chat_id, TEST_START)
+    test_start = load_test_config().get("start")
+    await save_progress(chat_id, {"answers": [], "question_id": test_start or ""})
+    await send_test_question(callback.message, chat_id, test_start)
     await callback.answer()
 
 
@@ -112,9 +124,9 @@ async def message_test_start(message: Message):
     ADMIN_CHATS.discard(chat_id)
     await db.log_user(chat_id, message.from_user, const.TEST)
 
-    TEST_PROGRESS[chat_id] = {"answers": []}
-
-    await send_test_question(message, chat_id, TEST_START)
+    test_start = load_test_config().get("start")
+    await save_progress(chat_id, {"answers": [], "question_id": test_start or ""})
+    await send_test_question(message, chat_id, test_start)
 
 
 @router.callback_query(F.data.startswith(f"{const.TEST}:"))
@@ -128,26 +140,52 @@ async def callback_test_answer(callback: CallbackQuery):
         await callback.answer()
         return
 
-    _, answer_id, next_question_id = parts
+    _, answer_id, callback_next_question_id = parts
 
     chat_id = callback.message.chat.id
 
     # проверяем и обновляем прогресс
-    progress = TEST_PROGRESS.get(chat_id)
+    progress = await get_progress(chat_id)
     if progress is None:
-        # если по какой-то причине состояние потерялось — стартуем заново
-        progress = {"answers": []}
-        TEST_PROGRESS[chat_id] = progress
+        test_start = load_test_config().get("start")
+        await save_progress(chat_id, {"answers": [], "question_id": test_start or ""})
+        await send_test_question(callback.message, chat_id, test_start)
+        await callback.answer(
+            "Предыдущее прохождение завершено. Я начала диагностику заново.",
+            show_alert=True,
+        )
+        return
+
+    test_config = load_test_config()
+    questions = test_config.get("questions", {})
+    question_id = progress.get("question_id")
+    question = questions.get(question_id, {})
+    option = next(
+        (item for item in question.get("options", []) if item.get("id") == answer_id),
+        None,
+    )
+    if option is None:
+        await callback.answer("Этот ответ уже неактуален.", show_alert=True)
+        return
+
+    next_question_id = option.get("next")
+    if callback_next_question_id != next_question_id:
+        await callback.answer("Кнопка устарела. Начни диагностику заново.", show_alert=True)
+        return
 
     progress["answers"].append(answer_id)
-
-    print(progress["answers"])
+    progress["answers"] = list(dict.fromkeys(progress["answers"]))
 
     if next_question_id == "advice":
+        progress["question_id"] = "__finishing__"
+        await save_progress(chat_id, progress)
         await send_test_result(callback.message, chat_id)
-    elif next_question_id and next_question_id in TEST_QUESTIONS:
+    elif next_question_id and next_question_id in questions:
+        progress["question_id"] = next_question_id
+        await save_progress(chat_id, progress)
         await send_test_question(callback.message, chat_id, next_question_id)
     else:
+        await save_progress(chat_id, progress)
         await send_test_result(callback.message, chat_id)
 
     await callback.answer()

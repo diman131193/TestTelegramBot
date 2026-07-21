@@ -3,8 +3,9 @@
 ## Стек
 
 - Python
-- `aiogram==3.22.0`
-- `aiosqlite==0.21.0`
+- `aiogram==3.29.1`
+- `aiosqlite==0.22.1`
+- `openpyxl==3.1.5` для импорта контентной таблицы
 - `python-dotenv==1.2.2`
 - SQLite
 - JSON-файлы для контента и медиа-ID
@@ -40,16 +41,25 @@ main.py
 app/
   const.py
   db.py
+  diagnostics.py
+  diagnostics_validation.py
   handlers.py
   handlers_test.py
   keyboards.py
   paths.py
   texts.py
 data/
-  advices.json
+  diagnostic_factors.json
+  diagnostic_rules.json
+  diagnostics_snapshot.json
   files.json
-  test_questions.json
   texts.json
+content/
+  diagnostics-content.xlsx
+scripts/
+  manage_diagnostics_content.py
+tests/
+  test_diagnostics.py
 requirements.txt
 ```
 
@@ -91,7 +101,7 @@ requirements.txt
 - `files(key)` -> список Telegram file ID;
 - `load_test_config()` -> структура диагностики.
 
-Ограничение: изменения JSON во время работы процесса не подхватываются без перезапуска.
+Тексты основных экранов загружаются при старте. Дерево диагностики читается при каждом новом вопросе, поэтому успешно опубликованные изменения доступны новым прохождениям без перезапуска.
 
 ### `app/keyboards.py`
 
@@ -129,17 +139,52 @@ ADMIN_CHATS: set[int] = set()
 
 Роуты диагностики волос.
 
-Состояние диагностики хранится в:
+Активное состояние кешируется в:
 
 ```python
 TEST_PROGRESS: Dict[int, Any] = {}
 ```
 
-Загруженные при старте данные:
+Одновременно состояние сохраняется в SQLite-таблице `diagnostic_sessions`. После перезапуска бота прохождение продолжается с ожидаемого вопроса.
 
-- `TEST_RULES`;
-- `TEST_QUESTIONS`;
-- `TEST_START`.
+Ответ проверяется относительно ожидаемого вопроса. Повторная или старая callback-кнопка не начисляет признаки повторно.
+
+Результат диагностики собирается через `app.diagnostics.build_recommendation`.
+
+### `app/diagnostics.py`
+
+Расчетный слой диагностики.
+
+Функции:
+
+- `analyze_answers(answers)` -> собирает признаки и выбирает состав результата;
+- `build_recommendation(answers)` -> возвращает HTML-текст рекомендации.
+
+Алгоритм:
+
+1. Каждый `answer_id` ищется в `data/diagnostic_factors.json`.
+2. Labels перезаписываются последним выбранным значением по группе.
+3. Scores суммируются.
+4. Tags объединяются.
+5. Правила из `data/diagnostic_rules.json` выбирают один `primary`, все `alert` и не более двух `addon`.
+6. Итоговый текст собирается в фиксированном продуктовом формате из опубликованного снимка `data/diagnostics_snapshot.json`.
+7. Внутренние scores не показываются пользователю.
+
+Поддерживаемые условия правил:
+
+- `min_scores`;
+- `max_scores`;
+- `label_equals`;
+- `label_in`;
+- `any_tags`;
+- `all_tags`;
+- `answers_any`;
+- `answers_all`;
+- `answers_none`.
+
+### `app/diagnostics_validation.py`
+
+Проверяет данные и прогоняет все допустимые пути до публикации. Контролирует связи, наличие основного результата и лимит Telegram.
 
 ### `app/db.py`
 
@@ -168,6 +213,8 @@ CREATE TABLE IF NOT EXISTS users (
 - если пользователь существует, обновляет профиль и последнее действие;
 - если новый `phone_number` не передан, сохраняет старый номер телефона.
 
+Таблица `diagnostic_sessions` хранит список ответов, ожидаемый вопрос и время обновления активного прохождения.
+
 ## Данные
 
 ### `data/texts.json`
@@ -186,13 +233,16 @@ CREATE TABLE IF NOT EXISTS users (
 - строка для одного фото;
 - список строк для media group отзывов.
 
-### `data/test_questions.json`
+### `data/diagnostics_snapshot.json`
 
-Содержит:
+Единый атомарно публикуемый снимок содержит:
 
-- `start` — ID стартового вопроса;
-- `questions` — словарь вопросов;
-- `rules` — точные правила выбора совета.
+- `questions.start` — ID стартового вопроса;
+- `questions.questions` — словарь вопросов;
+- `content.settings` — заголовки и ограничения;
+- `content.facts` — клиентские подписи признаков;
+- `content.modules` — карточки рекомендаций;
+- `content.services` — каталог услуг.
 
 Формат option:
 
@@ -209,9 +259,28 @@ CREATE TABLE IF NOT EXISTS users (
 - ID следующего вопроса;
 - `advice` для завершения теста.
 
-### `data/advices.json`
+### `data/diagnostic_factors.json`
 
-Содержит HTML-тексты советов по ключам `advice_<number>`.
+Описывает, что означает каждый вариант ответа.
+
+Для каждого `answer_id` можно задать:
+
+- `labels` — категориальные признаки;
+- `scores` — численные признаки;
+- `tags` — специальные маркеры.
+
+### `data/diagnostic_rules.json`
+
+Содержит:
+
+- связи правил и модулей;
+- роли `primary`, `alert`, `addon`;
+- условия срабатывания и технические приоритеты;
+- ID резервного основного модуля.
+
+### `content/diagnostics-content.xlsx`
+
+Редактор заказчика. Публикуется через `scripts/manage_diagnostics_content.py`; бот напрямую XLSX не читает.
 
 ## Нефункциональные требования
 
@@ -223,9 +292,6 @@ CREATE TABLE IF NOT EXISTS users (
 
 ## Текущие технические риски
 
-- Состояния консультации и диагностики хранятся в памяти.
-- Нет обработчика `price`.
+- Состояние консультации хранится только в памяти.
 - Нет миграций БД.
-- Нет автоматических тестов.
 - Команда `/load` не ограничена администратором.
-- В `handlers_test.py` есть `print(progress["answers"])`, который пишет пользовательские ответы в stdout.

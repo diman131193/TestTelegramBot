@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "fallback_primary_id": "primary_balanced",
+  "rules": [
+    {
+      "module_id": "alert_scalp_discomfort",
+      "role": "alert",
+      "priority": 100,
+      "conditions": {"min_scores": {"scalp_discomfort": 4}}
+    },
+    {
+      "module_id": "alert_chemical_damage",
+      "role": "alert",
+      "priority": 90,
+      "conditions": {"min_scores": {"chemical_risk": 3, "damage": 3}}
+    },
+    {
+      "module_id": "alert_uncertain_state",
+      "role": "alert",
+      "priority": 80,
+      "conditions": {"label_equals": {"hair_state": "unknown"}}
+    },
+    {
+      "module_id": "primary_volume",
+      "role": "primary",
+      "priority": 50,
+      "conditions": {"label_equals": {"main_problem": "no_volume"}}
+    },
+    {
+      "module_id": "primary_oily_roots",
+      "role": "primary",
+      "priority": 50,
+      "conditions": {"label_equals": {"main_problem": "oily_roots"}}
+    },
+    {
+      "module_id": "primary_shape_control",
+      "role": "primary",
+      "priority": 50,
+      "conditions": {"label_equals": {"main_problem": "shape_control"}}
+    },
+    {
+      "module_id": "primary_dry_length",
+      "role": "primary",
+      "priority": 50,
+      "conditions": {"label_equals": {"main_problem": "dryness"}}
+    },
+    {
+      "module_id": "addon_styling_residue",
+      "role": "addon",
+      "priority": 70,
+      "conditions": {"answers_any": ["5.3"]}
+    },
+    {
+      "module_id": "addon_hot_tools",
+      "role": "addon",
+      "priority": 60,
+      "conditions": {"label_equals": {"styling": "hot_tools"}}
+    },
+    {
+      "module_id": "addon_air_dry",
+      "role": "addon",
+      "priority": 40,
+      "conditions": {"label_equals": {"styling": "air_dry"}}
+    },
+    {
+      "module_id": "addon_blow_dry",
+      "role": "addon",
+      "priority": 40,
+      "conditions": {"label_equals": {"styling": "blow_dry_no_roots"}}
+    },
+    {
+      "module_id": "addon_brushing",
+      "role": "addon",
+      "priority": 40,
+      "conditions": {"label_equals": {"styling": "brushing"}}
+    },
+    {
+      "module_id": "addon_long_hair",
+      "role": "addon",
+      "priority": 30,
+      "conditions": {
+        "label_in": {
+          "length": ["long", "very_long"],
+          "main_problem": ["no_volume", "oily_roots", "shape_control"]
+        }
+      }
+    }
+  ]
+}
